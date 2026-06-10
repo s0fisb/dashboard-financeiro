@@ -15,8 +15,10 @@ type Store struct {
 	Expenses []models.Expense
 	Goals    []models.Goal
 	Budget   models.MonthlyBudget
+	Deposits []models.Deposit
 	nextExpID int
 	nextGoalID int
+	nextDepID  int
 }
 
 func NewStore() *Store {
@@ -88,6 +90,7 @@ func (s *Store) seedData() {
 		{ID: 4, Name: "Entrada Apartamento",   TargetAmount: 80000, CurrentAmount: 22000, Deadline: now.AddDate(3, 0, 0), Color: "#fb923c", Icon: "🏠"},
 	}
 	s.nextGoalID = 5
+	s.nextDepID = 1
 
 	s.Budget = models.MonthlyBudget{
 		Month: int(now.Month()), Year: now.Year(), Income: 8500,
@@ -210,4 +213,55 @@ func (s *Store) GetBudget() models.MonthlyBudget {
 func (s *Store) UpdateBudget(b models.MonthlyBudget) {
 	s.mu.Lock(); defer s.mu.Unlock()
 	s.Budget = b
+}
+
+// ── DEPOSITS ──────────────────────────────────
+
+func (s *Store) AddDeposit(d models.Deposit) models.Deposit {
+	s.mu.Lock(); defer s.mu.Unlock()
+	d.ID = s.nextDepID
+	s.nextDepID++
+	if d.Date.IsZero() { d.Date = time.Now() }
+	s.Deposits = append(s.Deposits, d)
+	return d
+}
+
+func (s *Store) GetDeposits() []models.Deposit {
+	s.mu.RLock(); defer s.mu.RUnlock()
+	out := make([]models.Deposit, len(s.Deposits))
+	copy(out, s.Deposits)
+	return out
+}
+
+func (s *Store) GetCurrentMonthDeposits() []models.Deposit {
+	s.mu.RLock(); defer s.mu.RUnlock()
+	now := time.Now()
+	var result []models.Deposit
+	for _, d := range s.Deposits {
+		if d.Date.Month() == now.Month() && d.Date.Year() == now.Year() {
+			result = append(result, d)
+		}
+	}
+	return result
+}
+
+// ── RESET ─────────────────────────────────────
+
+func (s *Store) ResetAll() {
+	s.mu.Lock(); defer s.mu.Unlock()
+	now := time.Now()
+	s.Expenses = nil
+	s.Goals = nil
+	s.Deposits = nil
+	s.nextExpID = 1
+	s.nextGoalID = 1
+	s.nextDepID = 1
+	s.Budget = models.MonthlyBudget{
+		Month: int(now.Month()), Year: now.Year(), Income: 0,
+		Budgets: map[models.Category]float64{
+			models.CategoryFood: 0, models.CategoryTransport: 0, models.CategoryHealth: 0,
+			models.CategoryLeisure: 0, models.CategoryEducation: 0, models.CategoryHousing: 0,
+			models.CategoryOther: 0,
+		},
+	}
 }

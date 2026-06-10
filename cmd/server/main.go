@@ -36,6 +36,10 @@ func main() {
 	// Calendar & Lua
 	mux.HandleFunc("/api/calendar", cors(h.Calendar))
 	mux.HandleFunc("/api/lua-scripts", cors(h.LuaScripts))
+	// Reset & Deposits
+	mux.HandleFunc("/api/reset", cors(h.Reset))
+	mux.HandleFunc("/api/deposits", cors(h.Deposits))
+	mux.HandleFunc("/api/deposit", cors(h.Deposit))
 
 	// Static
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static"))))

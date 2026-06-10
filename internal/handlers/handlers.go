@@ -54,7 +54,12 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		totalExpenses += e.Amount
 	}
 
-	income := budget.Income
+	// deposits this month add to income
+	depositTotal := 0.0
+	for _, d := range h.store.GetCurrentMonthDeposits() {
+		depositTotal += d.Amount
+	}
+	income := budget.Income + depositTotal
 	budgetUsage := make(map[string]float64)
 	for cat, lim := range budget.Budgets {
 		if lim > 0 {
@@ -87,6 +92,7 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	goals := h.store.GetGoals()
 	summary := models.DashboardSummary{
 		TotalExpenses: totalExpenses, TotalIncome: income,
+		DepositTotal: depositTotal,
 		Balance: income - totalExpenses, ExpensesByCategory: byCategory,
 		MonthlyTrend: forecasts, Goals: goals, RecentExpenses: recent, BudgetUsage: budgetUsage,
 	}
@@ -237,6 +243,63 @@ func (h *Handler) LuaScripts(w http.ResponseWriter, r *http.Request) {
 		"insights": h.luaEng.ScriptSource("insights"),
 		"budget":   h.luaEng.ScriptSource("budget_check"),
 	})
+}
+
+// ── RESET ─────────────────────────────────────
+
+func (h *Handler) Reset(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		errResponse(w, 405, "método não permitido")
+		return
+	}
+	h.store.ResetAll()
+	jsonResponse(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// ── DEPOSIT (entrada avulsa) ───────────────────
+
+func (h *Handler) Deposit(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		errResponse(w, 405, "método não permitido")
+		return
+	}
+	var body struct {
+		Description string  `json:"description"`
+		Amount      float64 `json:"amount"`
+		Date        string  `json:"date"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		errResponse(w, 400, err.Error())
+		return
+	}
+	if body.Amount <= 0 {
+		errResponse(w, 400, "valor inválido")
+		return
+	}
+	var t time.Time
+	if body.Date != "" {
+		parsed, err := time.Parse("2006-01-02", body.Date)
+		if err == nil {
+			t = parsed
+		}
+	}
+	if t.IsZero() {
+		t = time.Now()
+	}
+	dep := h.store.AddDeposit(models.Deposit{
+		Description: body.Description,
+		Amount:      body.Amount,
+		Date:        t,
+	})
+	jsonResponse(w, http.StatusCreated, dep)
+}
+
+func (h *Handler) Deposits(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		errResponse(w, 405, "método não permitido")
+		return
+	}
+	jsonResponse(w, http.StatusOK, h.store.GetDeposits())
 }
 
 func (h *Handler) GoalDeposit(w http.ResponseWriter, r *http.Request) {

@@ -71,6 +71,8 @@ const fmtDateInput = iso => { const d=new Date(iso); return d.toISOString().slic
 
 // ── RENDER: KPIs ──────────────────────────────
 function renderKPIs(d) {
+  const depositEl = document.getElementById('kpi-deposit-total');
+  if (depositEl) depositEl.textContent = fmtBRL(d.deposit_total || 0);
   document.getElementById('kpi-income').textContent  = fmtBRL(d.total_income);
   document.getElementById('kpi-expense').textContent = fmtBRL(d.total_expenses);
   document.getElementById('kpi-balance').textContent = fmtBRL(d.balance);
@@ -461,4 +463,42 @@ function toast(msg, type='success') {
   el.textContent=msg; el.className='toast show '+(type||'');
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ══ RESET DASHBOARD ══════════════════════════
+async function resetDashboard() {
+  if (!confirm('⚠️ Zerar TODOS os dados do dashboard?\n\nGastos, metas, depósitos e orçamentos serão apagados. Esta ação não pode ser desfeita.')) return;
+  try {
+    await fetch(`${API}/reset`, { method: 'POST' });
+    toast('Dashboard zerado ✓', 'success');
+    await loadDashboard();
+    const active = document.querySelector('.tab.active')?.id?.replace('tab-','');
+    if (active === 'expenses') renderAllExpenses();
+    if (active === 'goals') renderGoals();
+  } catch { toast('Erro ao resetar', 'error'); }
+}
+
+// ══ DEPOSIT MODAL (entrada avulsa) ═══════════
+function openDepositModal() {
+  document.getElementById('dep-desc').value = '';
+  document.getElementById('dep-amount').value = '';
+  document.getElementById('dep-date').value = new Date().toISOString().slice(0,10);
+  openModal('modal-deposit');
+}
+
+async function saveDeposit() {
+  const desc   = document.getElementById('dep-desc').value.trim();
+  const amount = parseFloat(document.getElementById('dep-amount').value);
+  const date   = document.getElementById('dep-date').value;
+  if (!desc || isNaN(amount) || amount <= 0) { toast('Preencha descrição e valor', 'error'); return; }
+  try {
+    await fetch(`${API}/deposit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: desc, amount, date })
+    });
+    toast(`+${fmtBRL(amount)} registrado ✓`, 'success');
+    closeModal('modal-deposit');
+    loadDashboard();
+  } catch { toast('Erro ao registrar depósito', 'error'); }
 }

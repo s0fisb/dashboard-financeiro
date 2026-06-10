@@ -49,7 +49,9 @@
         <span id="insight-text">Carregando...</span>
       </div>
       <button class="icon-btn" onclick="openBudgetModal()" title="Editar renda e orçamento">⚙</button>
+      <button class="icon-btn" onclick="openDepositModal()" title="Registrar entrada avulsa" style="color:#34d399">＋</button>
       <button class="icon-btn spin-on-click" onclick="loadDashboard(this)" title="Atualizar">↻</button>
+      <button class="icon-btn" onclick="resetDashboard()" title="Zerar dashboard" style="color:#f87171;opacity:.7">⊘</button>
     </div>
   </header>
 
@@ -62,6 +64,13 @@
         <div class="kpi-sub" id="kpi-income-sub">este mês</div>
         <button class="kpi-edit-btn" onclick="openBudgetModal()" title="Editar renda">✎</button>
         <div class="kpi-bg">↑</div>
+      </div>
+      <div class="kpi-card" style="border-color:#34d39933">
+        <div class="kpi-label">Entradas Avulsas</div>
+        <div class="kpi-value" id="kpi-deposit-total" style="color:#34d399">—</div>
+        <div class="kpi-sub">depósitos este mês</div>
+        <button class="kpi-edit-btn" onclick="openDepositModal()" title="Novo depósito" style="color:#34d399">＋</button>
+        <div class="kpi-bg" style="color:#34d39922">＋</div>
       </div>
       <div class="kpi-card kpi-expense">
         <div class="kpi-label">Total Gasto</div>
@@ -299,5 +308,26 @@
 <div class="toast" id="toast"></div>
 
 <script src="/static/js/dashboard.js"></script>
+<!-- ── MODAL: DEPÓSITO AVULSO ──────────────────── -->
+<div class="modal-backdrop" id="modal-deposit" onclick="closeModal('modal-deposit')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Nova Entrada Avulsa</div>
+    <button class="modal-close" onclick="closeModal('modal-deposit')">✕</button>
+    <div class="modal-body">
+      <p style="font-size:.8rem;color:var(--tm);margin-bottom:1rem">Registre freelances, bônus, vendas ou qualquer entrada que não seja sua renda fixa mensal.</p>
+      <label class="field-label">Descrição</label>
+      <input id="dep-desc" class="field-input" type="text" placeholder="ex: Freela de setembro, Venda do notebook…">
+      <label class="field-label">Valor (R$)</label>
+      <input id="dep-amount" class="field-input" type="number" step="0.01" min="0" placeholder="0,00">
+      <label class="field-label">Data</label>
+      <input id="dep-date" class="field-input" type="date">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-deposit')">Cancelar</button>
+      <button class="btn-primary" onclick="saveDeposit()">Registrar entrada</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
