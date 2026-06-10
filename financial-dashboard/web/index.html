@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinançasLua — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<body>
+  <div class="noise-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <span class="logo-icon">◈</span>
+      <div>
+        <div class="logo-name">FinançasLua</div>
+        <div class="logo-sub">powered by Go + Lua</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item active" data-tab="overview" onclick="switchTab('overview', this)">
+        <span class="nav-icon">◉</span> Visão Geral
+      </a>
+      <a class="nav-item" data-tab="expenses" onclick="switchTab('expenses', this)">
+        <span class="nav-icon">◈</span> Gastos
+      </a>
+      <a class="nav-item" data-tab="goals" onclick="switchTab('goals', this)">
+        <span class="nav-icon">◆</span> Metas
+      </a>
+      <a class="nav-item" data-tab="calendar" onclick="switchTab('calendar', this)">
+        <span class="nav-icon">◇</span> Calendário
+      </a>
+      <a class="nav-item" data-tab="forecast" onclick="switchTab('forecast', this)">
+        <span class="nav-icon">▲</span> Previsões
+      </a>
+      <a class="nav-item" data-tab="lua" onclick="switchTab('lua', this)">
+        <span class="nav-icon">⬡</span> Scripts Lua
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="lua-badge">
+        <span class="lua-dot"></span>
+        Lua Engine Ativo
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Header -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="page-title" id="page-title">Visão Geral</div>
+        <div class="page-date" id="page-date"></div>
+      </div>
+      <div class="topbar-right">
+        <div class="insight-badge" id="insight-badge">
+          <span class="insight-icon">⬡</span>
+          <span id="insight-text">Carregando análise Lua...</span>
+        </div>
+        <button class="btn-refresh" onclick="loadDashboard()" title="Atualizar">↻</button>
+      </div>
+    </header>
+
+    <!-- TAB: OVERVIEW -->
+    <section class="tab active" id="tab-overview">
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-income">
+          <div class="kpi-label">Renda Mensal</div>
+          <div class="kpi-value" id="kpi-income">—</div>
+          <div class="kpi-sub">este mês</div>
+          <div class="kpi-bg-icon">↑</div>
+        </div>
+        <div class="kpi-card kpi-expense">
+          <div class="kpi-label">Total Gasto</div>
+          <div class="kpi-value" id="kpi-expense">—</div>
+          <div class="kpi-sub" id="kpi-expense-pct">—% da renda</div>
+          <div class="kpi-bg-icon">↓</div>
+        </div>
+        <div class="kpi-card kpi-balance">
+          <div class="kpi-label">Saldo</div>
+          <div class="kpi-value" id="kpi-balance">—</div>
+          <div class="kpi-sub" id="kpi-savings">poupança</div>
+          <div class="kpi-bg-icon">◈</div>
+        </div>
+        <div class="kpi-card kpi-goals">
+          <div class="kpi-label">Metas Ativas</div>
+          <div class="kpi-value" id="kpi-goals">—</div>
+          <div class="kpi-sub" id="kpi-goals-sub">em andamento</div>
+          <div class="kpi-bg-icon">◆</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="charts-row">
+        <div class="chart-card chart-donut">
+          <div class="chart-header">
+            <div class="chart-title">Gastos por Categoria</div>
+            <div class="chart-badge">Este mês</div>
+          </div>
+          <div class="donut-wrap">
+            <canvas id="chartDonut"></canvas>
+            <div class="donut-center" id="donut-center">
+              <div class="donut-total" id="donut-total">—</div>
+              <div class="donut-label">total</div>
+            </div>
+          </div>
+          <div class="legend" id="donut-legend"></div>
+        </div>
+
+        <div class="chart-card chart-bar">
+          <div class="chart-header">
+            <div class="chart-title">Tendência Mensal</div>
+            <div class="chart-badge">6 meses</div>
+          </div>
+          <canvas id="chartBar" style="max-height:220px"></canvas>
+        </div>
+      </div>
+
+      <!-- Budget Progress -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Orçamento por Categoria</div>
+          <div class="section-badge">Lua: budget_check.lua</div>
+        </div>
+        <div class="budget-grid" id="budget-grid"></div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Transações Recentes</div>
+        </div>
+        <div class="tx-list" id="tx-list"></div>
+      </div>
+    </section>
+
+    <!-- TAB: EXPENSES -->
+    <section class="tab" id="tab-expenses">
+      <div class="tab-inner">
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Adicionar Gasto</div>
+          </div>
+          <div class="add-expense-form">
+            <input class="form-input" id="exp-desc" placeholder="Descrição" />
+            <input class="form-input" id="exp-amount" type="number" placeholder="Valor (R$)" step="0.01" />
+            <select class="form-input" id="exp-cat">
+              <option value="alimentação">Alimentação</option>
+              <option value="transporte">Transporte</option>
+              <option value="saúde">Saúde</option>
+              <option value="lazer">Lazer</option>
+              <option value="educação">Educação</option>
+              <option value="moradia">Moradia</option>
+              <option value="outros">Outros</option>
+            </select>
+            <button class="btn-primary" onclick="addExpense()">+ Adicionar</button>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Todos os Gastos — Mês Atual</div>
+          </div>
+          <div class="tx-list full" id="all-expenses"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: GOALS -->
+    <section class="tab" id="tab-goals">
+      <div class="goals-grid" id="goals-grid"></div>
+    </section>
+
+    <!-- TAB: CALENDAR -->
+    <section class="tab" id="tab-calendar">
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title" id="cal-title">Calendário Financeiro</div>
+        </div>
+        <div class="calendar-wrap">
+          <div class="cal-header">
+            <button class="cal-nav" onclick="changeMonth(-1)">←</button>
+            <div class="cal-month-title" id="cal-month-label"></div>
+            <button class="cal-nav" onclick="changeMonth(1)">→</button>
+          </div>
+          <div class="cal-weekdays">
+            <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+        <div class="cal-events" id="cal-events"></div>
+      </div>
+    </section>
+
+    <!-- TAB: FORECAST -->
+    <section class="tab" id="tab-forecast">
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Previsão de Gastos — Lua forecast.lua</div>
+          <div class="section-badge">Média Ponderada</div>
+        </div>
+        <canvas id="chartForecast" style="max-height:300px"></canvas>
+      </div>
+      <div class="forecast-cards" id="forecast-cards"></div>
+    </section>
+
+    <!-- TAB: LUA SCRIPTS -->
+    <section class="tab" id="tab-lua">
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Scripts Lua — Motor de Análise</div>
+          <div class="section-badge">gopher-lua</div>
+        </div>
+        <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:.9rem;font-family:var(--font-mono)">
+          Os scripts abaixo são executados pelo backend Go usando o runtime gopher-lua.
+          Eles calculam previsões, geram insights e verificam orçamentos em tempo real.
+        </p>
+        <div class="lua-scripts" id="lua-scripts"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
