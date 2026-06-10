@@ -463,3 +463,4 @@ function toast(msg, type='success') {
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
 }
+JSEOF
