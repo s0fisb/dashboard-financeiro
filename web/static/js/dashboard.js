@@ -1,3 +1,5 @@
+bash
+cat > /home/claude/financial-dashboard/web/static/js/dashboard.js << 'JSEOF'
 /* FinançasLua — Dashboard JS com CRUD completo */
 const API = window.location.origin + '/api';
 
@@ -58,7 +60,6 @@ async function loadDashboard(btn) {
     renderRecentTx(dash.recent_expenses);
     document.getElementById('insight-text').textContent = dash.lua_insights || '—';
 
-    // also refresh active tab
     const active = document.querySelector('.tab.active')?.id?.replace('tab-','');
     if (active==='goals') renderGoals();
   } catch(e) { toast('Erro ao carregar dados','error'); console.error(e); }
@@ -184,6 +185,7 @@ function renderGoals() {
     const dl=new Date(g.deadline).toLocaleDateString('pt-BR',{month:'short',year:'numeric'});
     return `<div class="goal-card">
       <div class="goal-actions">
+        <button class="act-btn edit" onclick="depositGoal(${g.id},'${g.name.replace(/'/g,"\\'")}')" title="Depositar">+</button>
         <button class="act-btn edit" onclick='openGoalModal(${JSON.stringify(g)})' title="Editar">✎</button>
         <button class="act-btn del"  onclick="deleteGoal(${g.id})" title="Excluir">✕</button>
       </div>
@@ -344,7 +346,6 @@ function openGoalModal(goal) {
   document.getElementById('goal-target').value  = goal?.target_amount || '';
   document.getElementById('goal-current').value = goal?.current_amount || '';
   document.getElementById('goal-deadline').value= goal?.deadline ? fmtDateInput(goal.deadline) : '';
-  // icon & color
   const icon  = goal?.icon  || '💰';
   const color = goal?.color || '#4ade80';
   document.getElementById('goal-icon').value  = icon;
@@ -391,6 +392,26 @@ async function deleteGoal(id) {
     renderGoals();
     loadDashboard();
   } catch { toast('Erro ao excluir','error'); }
+}
+
+// ══ GOAL DEPOSIT ═════════════════════════════
+async function depositGoal(id, name) {
+  const val = prompt(`Depositar na meta "${name}"\nValor (R$):`);
+  if (val === null) return;
+  const amount = parseFloat(val.replace(',', '.'));
+  if (isNaN(amount) || amount <= 0) { toast('Valor inválido', 'error'); return; }
+  try {
+    await fetch(`${API}/goals/deposit/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount })
+    });
+    toast(`+${fmtBRL(amount)} depositado ✓`, 'success');
+    const r = await fetch(`${API}/goals`).then(r => r.json());
+    state.goals = r;
+    renderGoals();
+    loadDashboard();
+  } catch { toast('Erro ao depositar', 'error'); }
 }
 
 // ══ BUDGET MODAL ═════════════════════════════
