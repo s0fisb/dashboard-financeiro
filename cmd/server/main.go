@@ -13,39 +13,43 @@ import (
 
 func main() {
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	if port == "" { port = "8080" }
 
 	luaEng := lua.NewEngine()
 	store := handlers.NewStore()
 	h := handlers.New(store, luaEng)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/dashboard",   cors(h.Dashboard))
-	mux.HandleFunc("/api/expenses",    cors(h.Expenses))
-	mux.HandleFunc("/api/goals",       cors(h.Goals))
-	mux.HandleFunc("/api/calendar",    cors(h.Calendar))
-	mux.HandleFunc("/api/lua-scripts", cors(h.LuaScripts))
+
+	// Dashboard
+	mux.HandleFunc("/api/dashboard",      cors(h.Dashboard))
+	// Expenses collection + individual
+	mux.HandleFunc("/api/expenses",       cors(h.Expenses))
+	mux.HandleFunc("/api/expenses/",      cors(h.ExpenseByID))
+	// Goals collection + individual
+	mux.HandleFunc("/api/goals",          cors(h.Goals))
+	mux.HandleFunc("/api/goals/",         cors(h.GoalByID))
+	// Budget / income
+	mux.HandleFunc("/api/budget",         cors(h.Budget))
+	// Calendar & Lua
+	mux.HandleFunc("/api/calendar",       cors(h.Calendar))
+	mux.HandleFunc("/api/lua-scripts",    cors(h.LuaScripts))
+
+	// Static
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static"))))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./web/index.html")
 	})
 
-	srv := &http.Server{
-		Addr: ":" + port, Handler: logMW(mux),
-		ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second,
-	}
+	srv := &http.Server{Addr: ":" + port, Handler: logMW(mux), ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second}
 	log.Printf("🚀 FinançasLua — http://localhost:%s", port)
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatalf("server: %v", err)
-	}
+	if err := srv.ListenAndServe(); err != nil { log.Fatalf("server: %v", err) }
 }
 
 func cors(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == http.MethodOptions { w.WriteHeader(http.StatusNoContent); return }
 		next(w, r)

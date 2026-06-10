@@ -4,36 +4,47 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"financial-dashboard/internal/lua"
 	"financial-dashboard/internal/models"
 )
 
-// Handler holds all HTTP handler dependencies.
 type Handler struct {
 	store  *Store
 	luaEng *lua.Engine
 }
 
-// New creates a new Handler.
 func New(store *Store, eng *lua.Engine) *Handler {
 	return &Handler{store: store, luaEng: eng}
 }
 
 func jsonResponse(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
 }
 
-// Dashboard returns the full dashboard summary.
+func errResponse(w http.ResponseWriter, status int, msg string) {
+	jsonResponse(w, status, map[string]string{"error": msg})
+}
+
+func idFromPath(r *http.Request) (int, bool) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 3 { return 0, false }
+	id, err := strconv.Atoi(parts[len(parts)-1])
+	return id, err == nil
+}
+
+// ── DASHBOARD ─────────────────────────────────
+
 func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	currentExpenses := h.store.GetCurrentMonthExpenses()
+	budget := h.store.GetBudget()
 
-	// Sum by category
 	byCategory := make(map[string]float64)
 	totalExpenses := 0.0
 	for _, e := range currentExpenses {
@@ -41,128 +52,150 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		totalExpenses += e.Amount
 	}
 
-	income := h.store.Budget.Income
-
-	// Budget usage %
+	income := budget.Income
 	budgetUsage := make(map[string]float64)
-	for cat, budget := range h.store.Budget.Budgets {
-		if budget > 0 {
-			budgetUsage[string(cat)] = (byCategory[string(cat)] / budget) * 100
-		}
+	for cat, lim := range budget.Budgets {
+		if lim > 0 { budgetUsage[string(cat)] = (byCategory[string(cat)] / lim) * 100 }
 	}
 
-	// Monthly trend (last 6 months)
 	monthlyTotals := h.store.GetMonthlyTotals()
 	var forecasts []models.Forecast
 	var historyAmounts []float64
-
 	for i := 5; i >= 0; i-- {
 		t := now.AddDate(0, -i, 0)
 		key := t.Format("2006-01")
 		actual := monthlyTotals[key]
 		historyAmounts = append(historyAmounts, actual)
-		forecasts = append(forecasts, models.Forecast{
-			Month:     t.Format("Jan/06"),
-			Actual:    actual,
-			Predicted: 0,
-			Income:    income,
-		})
+		forecasts = append(forecasts, models.Forecast{Month: t.Format("Jan/06"), Actual: actual, Income: income})
 	}
-
-	// Lua forecast for next month
 	predicted := h.luaEng.RunForecast(historyAmounts)
-	nextMonth := now.AddDate(0, 1, 0)
 	forecasts = append(forecasts, models.Forecast{
-		Month:     nextMonth.Format("Jan/06") + " (prev.)",
-		Predicted: predicted,
-		Actual:    0,
-		Income:    income,
+		Month: now.AddDate(0, 1, 0).Format("Jan/06") + " ▲", Predicted: predicted, Income: income,
 	})
 
-	// Recent expenses (last 10)
-	sort.Slice(h.store.Expenses, func(i, j int) bool {
-		return h.store.Expenses[i].Date.After(h.store.Expenses[j].Date)
-	})
-	recent := h.store.Expenses
-	if len(recent) > 10 {
-		recent = recent[:10]
-	}
+	allExp := h.store.GetAllExpenses()
+	sort.Slice(allExp, func(i, j int) bool { return allExp[i].Date.After(allExp[j].Date) })
+	recent := allExp
+	if len(recent) > 10 { recent = recent[:10] }
 
+	goals := h.store.GetGoals()
 	summary := models.DashboardSummary{
-		TotalExpenses:      totalExpenses,
-		TotalIncome:        income,
-		Balance:            income - totalExpenses,
-		ExpensesByCategory: byCategory,
-		MonthlyTrend:       forecasts,
-		Goals:              h.store.Goals,
-		RecentExpenses:     recent,
-		BudgetUsage:        budgetUsage,
+		TotalExpenses: totalExpenses, TotalIncome: income,
+		Balance: income - totalExpenses, ExpensesByCategory: byCategory,
+		MonthlyTrend: forecasts, Goals: goals, RecentExpenses: recent, BudgetUsage: budgetUsage,
 	}
-
 	summary.LuaInsights = h.luaEng.RunInsights(summary)
-
 	jsonResponse(w, http.StatusOK, summary)
 }
 
-// Expenses returns all current month expenses.
+// ── EXPENSES ─────────────────────────────────
+
 func (h *Handler) Expenses(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	switch r.Method {
+	case http.MethodGet:
+		all := h.store.GetAllExpenses()
+		sort.Slice(all, func(i, j int) bool { return all[i].Date.After(all[j].Date) })
+		jsonResponse(w, http.StatusOK, all)
+
+	case http.MethodPost:
 		var e models.Expense
-		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
-			jsonResponse(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
-		}
-		created := h.store.AddExpense(e)
-		jsonResponse(w, http.StatusCreated, created)
-		return
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil { errResponse(w, 400, err.Error()); return }
+		jsonResponse(w, http.StatusCreated, h.store.AddExpense(e))
 	}
-	jsonResponse(w, http.StatusOK, h.store.GetCurrentMonthExpenses())
 }
 
-// Goals returns all financial goals.
+func (h *Handler) ExpenseByID(w http.ResponseWriter, r *http.Request) {
+	id, ok := idFromPath(r)
+	if !ok { errResponse(w, 400, "id inválido"); return }
+
+	switch r.Method {
+	case http.MethodPut:
+		var e models.Expense
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil { errResponse(w, 400, err.Error()); return }
+		e.ID = id
+		updated, found := h.store.UpdateExpense(e)
+		if !found { errResponse(w, 404, "gasto não encontrado"); return }
+		jsonResponse(w, http.StatusOK, updated)
+
+	case http.MethodDelete:
+		if !h.store.DeleteExpense(id) { errResponse(w, 404, "gasto não encontrado"); return }
+		jsonResponse(w, http.StatusOK, map[string]bool{"deleted": true})
+	}
+}
+
+// ── GOALS ─────────────────────────────────────
+
 func (h *Handler) Goals(w http.ResponseWriter, r *http.Request) {
-	jsonResponse(w, http.StatusOK, h.store.Goals)
+	switch r.Method {
+	case http.MethodGet:
+		jsonResponse(w, http.StatusOK, h.store.GetGoals())
+	case http.MethodPost:
+		var g models.Goal
+		if err := json.NewDecoder(r.Body).Decode(&g); err != nil { errResponse(w, 400, err.Error()); return }
+		jsonResponse(w, http.StatusCreated, h.store.AddGoal(g))
+	}
 }
 
-// Calendar returns calendar events for the current month.
+func (h *Handler) GoalByID(w http.ResponseWriter, r *http.Request) {
+	id, ok := idFromPath(r)
+	if !ok { errResponse(w, 400, "id inválido"); return }
+
+	switch r.Method {
+	case http.MethodPut:
+		var g models.Goal
+		if err := json.NewDecoder(r.Body).Decode(&g); err != nil { errResponse(w, 400, err.Error()); return }
+		g.ID = id
+		updated, found := h.store.UpdateGoal(g)
+		if !found { errResponse(w, 404, "meta não encontrada"); return }
+		jsonResponse(w, http.StatusOK, updated)
+
+	case http.MethodDelete:
+		if !h.store.DeleteGoal(id) { errResponse(w, 404, "meta não encontrada"); return }
+		jsonResponse(w, http.StatusOK, map[string]bool{"deleted": true})
+	}
+}
+
+// ── BUDGET ────────────────────────────────────
+
+func (h *Handler) Budget(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		jsonResponse(w, http.StatusOK, h.store.GetBudget())
+	case http.MethodPut:
+		var b models.MonthlyBudget
+		if err := json.NewDecoder(r.Body).Decode(&b); err != nil { errResponse(w, 400, err.Error()); return }
+		h.store.UpdateBudget(b)
+		jsonResponse(w, http.StatusOK, b)
+	}
+}
+
+// ── CALENDAR ──────────────────────────────────
+
 func (h *Handler) Calendar(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	var events []models.CalendarEvent
-
-	for _, e := range h.store.Expenses {
-		if e.Date.Month() == now.Month() && e.Date.Year() == now.Year() {
-			events = append(events, models.CalendarEvent{
-				ID:       e.ID,
-				Title:    e.Description,
-				Amount:   e.Amount,
-				Date:     e.Date,
-				Type:     "expense",
-				Category: e.Category,
-			})
-		}
+	for _, e := range h.store.GetCurrentMonthExpenses() {
+		events = append(events, models.CalendarEvent{
+			ID: e.ID, Title: e.Description, Amount: e.Amount,
+			Date: e.Date, Type: "expense", Category: e.Category,
+		})
 	}
-
-	// Add goal deadlines
-	for _, g := range h.store.Goals {
+	for _, g := range h.store.GetGoals() {
 		if g.Deadline.Month() == now.Month() && g.Deadline.Year() == now.Year() {
 			events = append(events, models.CalendarEvent{
-				ID:    g.ID + 1000,
-				Title: "Meta: " + g.Name,
-				Date:  g.Deadline,
-				Type:  "goal",
+				ID: g.ID + 10000, Title: "Meta: " + g.Name, Date: g.Deadline, Type: "goal",
 			})
 		}
 	}
-
 	jsonResponse(w, http.StatusOK, events)
 }
 
-// LuaScripts returns the Lua script sources for transparency.
+// ── LUA SCRIPTS ───────────────────────────────
+
 func (h *Handler) LuaScripts(w http.ResponseWriter, r *http.Request) {
-	scripts := map[string]string{
+	jsonResponse(w, http.StatusOK, map[string]string{
 		"forecast": h.luaEng.ScriptSource("forecast"),
 		"insights": h.luaEng.ScriptSource("insights"),
 		"budget":   h.luaEng.ScriptSource("budget_check"),
-	}
-	jsonResponse(w, http.StatusOK, scripts)
+	})
 }
