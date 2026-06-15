@@ -200,5 +200,95 @@ O que aprendemos (escolha 1–2 para falar):
   passo natural seria persistir em banco (SQLite).
 - **"O que é gopher-lua?"** → Um interpretador da linguagem Lua escrito em Go, que permite
   rodar scripts Lua de dentro de um programa Go.
+
+### Sobre as linguagens (conceitos da disciplina)
+
+- **"Qual a diferença prática entre Go e Lua no projeto?"** → Go é **compilada e de tipagem
+  estática** (erros aparecem na compilação, vira um binário); Lua é **interpretada e de
+  tipagem dinâmica** (roda na hora, sem compilar, ideal para regras que mudam). No projeto
+  isso fica claro: o Go é a estrutura fixa, o Lua é a parte flexível.
+
+- **"Lua é fortemente ou fracamente tipada?"** → Lua é **dinamicamente tipada** (o tipo está
+  no valor, não na variável) e razoavelmente forte (não converte tipos incompatíveis sozinha,
+  ex.: não soma número com tabela). Go é **estaticamente e fortemente tipada**.
+
+- **"Lua tem coletor de lixo (garbage collection)?"** → Sim, ambas têm. Lua e Go gerenciam
+  memória automaticamente — não precisamos liberar memória manualmente como em C.
+
+- **"Qual o paradigma de cada linguagem?"** → As duas são **multiparadigma**, com base
+  **imperativa/procedural**. Go tem orientação a objetos leve (structs + métodos, sem herança)
+  e concorrência por goroutines; Lua é procedural com forte uso de **tabelas** como estrutura
+  central e funções como valores de primeira classe.
+
+- **"O que é uma 'tabela' em Lua?"** → É a **única estrutura de dados** do Lua: serve ao mesmo
+  tempo como array, dicionário, objeto e até como base de orientação a objetos. No projeto,
+  passamos os dados (gastos, metas) para o Lua dentro de tabelas.
+
+- **"Por que Lua é considerada leve/rápida?"** → É uma linguagem minúscula, projetada para
+  ser embarcada; o interpretador é pequeno e o consumo de memória é baixo. Por isso é usada
+  em jogos, dispositivos embarcados e como linguagem de extensão.
+
+### Sobre a arquitetura
+
+- **"Como as duas linguagens trocam dados na prática?"** → O Go converte seus dados em
+  **tabelas Lua**, chama a função Lua pelo nome, ela processa e devolve o resultado (um número
+  ou uma tabela de mensagens), que o Go lê de volta e exibe. É uma fronteira bem definida.
+
+- **"Por que criam um interpretador Lua novo a cada chamada?"** → Porque o gopher-lua **não é
+  seguro para acesso concorrente** (não é *goroutine-safe*). Como o servidor Go atende várias
+  requisições ao mesmo tempo, cada chamada usa seu próprio estado Lua isolado, evitando
+  conflitos. É um detalhe que mostra que pensamos na concorrência.
+
+- **"O que acontece se um script Lua tiver erro?"** → A chamada é protegida: se o script
+  falhar, o Go trata o erro e segue com um valor padrão, sem derrubar o servidor.
+
+- **"Onde estão guardados os dados financeiros?"** → Num **store em memória** no Go, populado
+  com dados de exemplo. Some quando o servidor reinicia — o foco do trabalho eram as linguagens,
+  não a persistência. O próximo passo natural seria SQLite.
+
+- **"Vocês usaram algum framework web?"** → Não. Usamos só a **biblioteca padrão do Go**
+  (`net/http` e `html/template`). Foi uma escolha para mostrar o que a linguagem entrega
+  de fábrica.
+
+### Sobre a parte web / sem JavaScript
+
+- **"Como tem interatividade sem JavaScript?"** → Pelo modelo clássico da web: **formulários
+  HTML** enviam dados ao servidor, o Go processa e devolve uma página nova já atualizada.
+  Toda navegação por abas é via links (`?tab=...`). Funciona sem nenhuma linha de script no
+  navegador.
+
+- **"Os gráficos são imagens?"** → Não são imagens prontas nem biblioteca de JS. São **SVG
+  desenhados pelo Go** em tempo de execução, a partir dos dados reais — o servidor calcula os
+  ângulos da rosca, as alturas das barras, etc., e manda o desenho dentro do HTML.
+
+- **"Qual a vantagem de renderizar no servidor?"** → Página chega pronta (rápida no primeiro
+  carregamento), funciona sem JavaScript habilitado, e mantém **toda a lógica concentrada em
+  Go e Lua** — coerente com o objetivo do trabalho.
+
+- **"E a desvantagem?"** → Cada ação recarrega a página (menos fluido que um app com JS) e há
+  mais idas ao servidor. Para um painel pessoal isso é perfeitamente aceitável, e o ganho foi
+  não precisar de uma terceira linguagem.
+
+### Perguntas de "pegadinha" / mais difíceis
+
+- **"Dava pra fazer a previsão e os insights direto em Go. Por que Lua?"** → Tecnicamente sim,
+  mas (1) o objetivo da disciplina era usar e integrar duas linguagens, e (2) colocar as regras
+  em Lua as torna **editáveis sem recompilar o backend** — é o conceito de usar uma linguagem
+  de scripting para a lógica que muda mais. É exatamente o caso de uso histórico do Lua.
+
+- **"Por que separar lógica de negócio do servidor é bom?"** → Organização e manutenção:
+  quem mexe nas regras financeiras (Lua) não precisa entender o servidor (Go), e vice-versa.
+  É o princípio de **separação de responsabilidades**.
+
+- **"Se eu mudasse os pesos da previsão, precisaria recompilar?"** → Não — basta editar o
+  arquivo `forecast.lua`. Isso ilustra bem a flexibilidade da abordagem com scripting.
+
+- **"Qual foi a maior dificuldade do projeto?"** → (Resposta honesta sugerida) Fazer a
+  **ponte entre as duas linguagens** — converter os dados do Go para o formato de tabelas do
+  Lua e ler o retorno corretamente — e abrir mão do JavaScript, o que exigiu desenhar os
+  gráficos em SVG no próprio Go.
+
+- **"O que vocês fariam diferente com mais tempo?"** → Persistência em banco (SQLite),
+  recarregar scripts Lua sem reiniciar o servidor (*hot-reload*) e autenticação de usuário.
 </content>
 </invoke>
