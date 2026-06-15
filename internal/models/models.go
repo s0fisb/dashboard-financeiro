@@ -56,9 +56,17 @@ type CalendarEvent struct {
 	Category    Category  `json:"category"`
 }
 
+type Deposit struct {
+	ID          int       `json:"id"`
+	Description string    `json:"description"`
+	Amount      float64   `json:"amount"`
+	Date        time.Time `json:"date"`
+}
+
 type DashboardSummary struct {
 	TotalExpenses    float64            `json:"total_expenses"`
 	TotalIncome      float64            `json:"total_income"`
+	DepositTotal     float64            `json:"deposit_total"`
 	Balance          float64            `json:"balance"`
 	ExpensesByCategory map[string]float64 `json:"expenses_by_category"`
 	MonthlyTrend     []Forecast         `json:"monthly_trend"`
