@@ -17,55 +17,53 @@ func main() {
 		port = "8080"
 	}
 
-	luaEng := lua.NewEngine()
+	luaEng, err := lua.NewEngine()
+	if err != nil {
+		log.Fatalf("lua engine: %v", err)
+	}
+
 	store := handlers.NewStore()
 	h := handlers.New(store, luaEng)
 
 	mux := http.NewServeMux()
 
-	// Dashboard
-	mux.HandleFunc("/api/dashboard", cors(h.Dashboard))
-	// Expenses collection + individual
-	mux.HandleFunc("/api/expenses", cors(h.Expenses))
-	mux.HandleFunc("/api/expenses/", cors(h.ExpenseByID))
-	// Goals collection + individual
-	mux.HandleFunc("/api/goals", cors(h.Goals))
-	mux.HandleFunc("/api/goals/", cors(h.GoalByID))
-	// Budget / income
-	mux.HandleFunc("/api/budget", cors(h.Budget))
-	// Calendar & Lua
-	mux.HandleFunc("/api/calendar", cors(h.Calendar))
-	mux.HandleFunc("/api/lua-scripts", cors(h.LuaScripts))
-	// Reset & Deposits
-	mux.HandleFunc("/api/reset", cors(h.Reset))
-	mux.HandleFunc("/api/deposits", cors(h.Deposits))
-	mux.HandleFunc("/api/deposit", cors(h.Deposit))
+	// Main page dispatcher (all tabs via ?tab=)
+	mux.HandleFunc("/", h.Index)
 
-	// Static
+	// Expense routes
+	mux.HandleFunc("/expenses/new", h.ExpenseForm)
+	mux.HandleFunc("/expenses", h.ExpensePost)
+	mux.HandleFunc("/expenses/", h.ExpenseRouter)
+
+	// Goal routes
+	mux.HandleFunc("/goals/new", h.GoalForm)
+	mux.HandleFunc("/goals", h.GoalPost)
+	mux.HandleFunc("/goals/", h.GoalRouter)
+
+	// Budget routes
+	mux.HandleFunc("/budget/edit", h.BudgetForm)
+	mux.HandleFunc("/budget", h.BudgetPost)
+
+	// Deposit routes
+	mux.HandleFunc("/deposits/new", h.DepositForm)
+	mux.HandleFunc("/deposits", h.DepositPost)
+
+	// Reset
+	mux.HandleFunc("/reset/confirm", h.ResetConfirm)
+	mux.HandleFunc("/reset", h.Reset)
+
+	// Static assets (CSS, fonts, images)
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static"))))
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/index.html")
-	})
 
-	mux.HandleFunc("/api/goals/deposit/", cors(h.GoalDeposit))
-
-	srv := &http.Server{Addr: ":" + port, Handler: logMW(mux), ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second}
-	log.Printf("🚀 FinançasLua — http://localhost:%s", port)
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      logMW(mux),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+	}
+	log.Printf("FinançasLua — http://localhost:%s", port)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("server: %v", err)
-	}
-}
-
-func cors(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		next(w, r)
 	}
 }
 

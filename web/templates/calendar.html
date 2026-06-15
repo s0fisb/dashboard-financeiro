@@ -1,0 +1,57 @@
+{{define "content"}}
+<div class="card">
+  <div class="cal-nav-row">
+    <a href="/?tab=calendar&year={{.PrevYear}}&month={{.PrevMonth}}" class="icon-btn">←</a>
+    <span class="cal-title">{{.MonthLabel}}</span>
+    <a href="/?tab=calendar&year={{.NextYear}}&month={{.NextMonth}}" class="icon-btn">→</a>
+  </div>
+
+  <div class="cal-weekdays">
+    <div>DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SAB</div>
+  </div>
+
+  <div class="cal-grid">
+    {{range seq .FirstWeekday}}
+    <div class="cal-day empty"></div>
+    {{end}}
+    {{$root := .}}
+    {{range $i := seq .DaysInMonth}}
+    {{$d := add $i 1}}
+    {{$evs := index $root.EventsByDay $d}}
+    <a href="/?tab=calendar&year={{$root.Year}}&month={{$root.Month}}&day={{$d}}"
+       class="cal-day{{if eq $d $root.Today}} today{{end}}{{if $evs}} has-exp{{end}}{{if eq $d $root.SelectedDay}} selected-day{{end}}"
+       style="text-decoration:none;color:inherit">
+      <span class="cal-day-num">{{$d}}</span>
+      {{if $evs}}
+      <span class="cal-day-amt">{{fmtBRL (sumCalEvents $evs)}}</span>
+      {{end}}
+    </a>
+    {{end}}
+  </div>
+
+  {{if .ShownEvents}}
+  <div class="cal-events">
+    {{if .SelectedDay}}
+    <div style="font-family:var(--ff-mono);font-size:.72rem;color:var(--tm);margin-bottom:.4rem">
+      Dia {{.SelectedDay}} — <a href="/?tab=calendar&year={{.Year}}&month={{.Month}}" style="color:var(--gold)">ver todos</a>
+    </div>
+    {{end}}
+    {{range .ShownEvents}}
+    <div class="cal-evt{{if eq .Type "goal"}} goal{{end}}">
+      <div>
+        <div class="cal-evt-title">{{.Title}}</div>
+        <div class="cal-evt-date">{{.DateFmt}}</div>
+      </div>
+      {{if .Amount}}
+      <span class="cal-evt-amt">{{fmtBRL .Amount}}</span>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <div style="text-align:center;padding:1.5rem;color:var(--tm);font-family:var(--ff-mono);font-size:.82rem">
+    Nenhum evento neste mês.
+  </div>
+  {{end}}
+</div>
+{{end}}

@@ -266,6 +266,30 @@ body { display: flex; }
 .toast.success { border-color:rgba(52,211,153,.4);color:var(--jade); }
 .toast.error   { border-color:rgba(248,113,113,.4);color:var(--rose); }
 
+/* ── FLASH MESSAGES ─────────────────────────── */
+.flash-success { background:rgba(52,211,153,.10); border:1px solid rgba(52,211,153,.3); border-radius:8px;
+  padding:.65rem 1.1rem; font-family:var(--ff-mono); font-size:.82rem; color:var(--jade); margin-bottom:1rem; }
+.flash-error { background:rgba(248,113,113,.10); border:1px solid rgba(248,113,113,.3); border-radius:8px;
+  padding:.65rem 1.1rem; font-family:var(--ff-mono); font-size:.82rem; color:var(--rose); margin-bottom:1rem; }
+
+/* ── FORM PAGES ─────────────────────────────── */
+.form-wrap { display:flex; justify-content:center; padding:2rem 0; }
+.form-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r2);
+  width:460px; max-width:94vw; padding:1.5rem 1.75rem; }
+.form-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
+
+/* ── CSS COLOR RADIO PICKER ─────────────────── */
+.color-picker-radio { display:flex; gap:.55rem; flex-wrap:wrap; margin-top:.2rem; }
+.color-radio-wrap { display:inline-flex; }
+.color-radio-wrap input[type=radio] { display:none; }
+.color-radio-swatch { display:inline-block; width:24px; height:24px; border-radius:6px;
+  cursor:pointer; border:2px solid transparent; transition:all .13s; }
+.color-radio-wrap input[type=radio]:checked + .color-radio-swatch { border-color:#fff; transform:scale(1.18); }
+.color-radio-swatch:hover { border-color:rgba(255,255,255,.5); }
+
+/* ── CALENDAR SELECTED DAY ──────────────────── */
+.cal-day.selected-day { background:var(--gold-glow); border-color:var(--border-g); }
+
 /* ── RESPONSIVE ─────────────────────────── */
 @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-row{grid-template-columns:1fr}}
 @media(max-width:860px){:root{--sw:190px}.insight-pill{display:none}}

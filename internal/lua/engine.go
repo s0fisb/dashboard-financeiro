@@ -1,151 +1,106 @@
-// Package lua provides a lightweight Lua script runner for financial analysis.
-// In production, replace with gopher-lua (github.com/yuin/gopher-lua).
-// This package simulates Lua execution and returns computed insights.
 package lua
 
 import (
 	"fmt"
-	"math"
+	"os"
 	"strings"
+
+	glua "github.com/yuin/gopher-lua"
 
 	"financial-dashboard/internal/models"
 )
 
-// Engine simulates execution of Lua financial scripts.
-// Production version would embed a real Lua VM via gopher-lua.
 type Engine struct {
-	scripts map[string]string
+	forecastSrc string
+	insightsSrc string
 }
 
-// NewEngine creates a new Lua engine with preloaded scripts.
-func NewEngine() *Engine {
-	e := &Engine{scripts: make(map[string]string)}
-	e.loadDefaultScripts()
-	return e
-}
-
-// loadDefaultScripts registers all Lua analysis scripts.
-// These represent what would be .lua files loaded at runtime.
-func (e *Engine) loadDefaultScripts() {
-	e.scripts["forecast"] = `
--- forecast.lua: Weighted moving average forecast
-function forecast(expenses)
-  local weights = {0.1, 0.15, 0.25, 0.5}
-  local total = 0
-  local weight_sum = 0
-  for i, v in ipairs(expenses) do
-    local w = weights[i] or 0.1
-    total = total + v * w
-    weight_sum = weight_sum + w
-  end
-  return total / weight_sum
-end
-`
-
-	e.scripts["insights"] = `
--- insights.lua: Generate financial health insights
-function analyze(expenses, income, goals)
-  local savings_rate = (income - expenses) / income * 100
-  local insights = {}
-  if savings_rate < 10 then
-    table.insert(insights, "⚠️ Taxa de poupança abaixo de 10%")
-  elseif savings_rate > 30 then
-    table.insert(insights, "✅ Excelente taxa de poupança!")
-  end
-  return insights
-end
-`
-
-	e.scripts["budget_check"] = `
--- budget_check.lua: Check budget limits per category
-function check_budget(spent, limit)
-  local pct = spent / limit * 100
-  if pct > 90 then return "crítico"
-  elseif pct > 70 then return "atenção"
-  else return "ok" end
-end
-`
-}
-
-// RunForecast executes the Lua forecast script on expense history.
-func (e *Engine) RunForecast(history []float64) float64 {
-	// Weighted moving average — mirrors the Lua forecast.lua logic
-	weights := []float64{0.1, 0.15, 0.25, 0.5}
-	total, weightSum := 0.0, 0.0
-	n := len(history)
-	for i, v := range history {
-		wi := 0.10
-		idx := i - (n - len(weights))
-		if idx >= 0 && idx < len(weights) {
-			wi = weights[idx]
-		}
-		total += v * wi
-		weightSum += wi
+// NewEngine loads the Lua scripts from disk. Returns an error if the files
+// cannot be read (server startup should fail fast in that case).
+func NewEngine() (*Engine, error) {
+	fc, err := os.ReadFile("scripts/lua/forecast.lua")
+	if err != nil {
+		return nil, fmt.Errorf("forecast.lua: %w", err)
 	}
-	if weightSum == 0 {
+	ins, err := os.ReadFile("scripts/lua/insights.lua")
+	if err != nil {
+		return nil, fmt.Errorf("insights.lua: %w", err)
+	}
+	return &Engine{forecastSrc: string(fc), insightsSrc: string(ins)}, nil
+}
+
+// RunForecast executes weighted_forecast(expenses) from forecast.lua.
+// A fresh Lua state is created per call because gopher-lua is not goroutine-safe.
+func (e *Engine) RunForecast(history []float64) float64 {
+	L := glua.NewState()
+	defer L.Close()
+	if err := L.DoString(e.forecastSrc); err != nil {
 		return 0
 	}
-	return math.Round(total/weightSum*100) / 100
+	tbl := L.NewTable()
+	for i, v := range history {
+		L.RawSetInt(tbl, i+1, glua.LNumber(v))
+	}
+	if err := L.CallByParam(glua.P{
+		Fn:      L.GetGlobal("weighted_forecast"),
+		NRet:    1,
+		Protect: true,
+	}, tbl); err != nil {
+		return 0
+	}
+	result := float64(L.ToNumber(-1))
+	L.Pop(1)
+	return result
 }
 
-// RunInsights executes insights.lua to produce financial health text.
-func (e *Engine) RunInsights(expenses models.DashboardSummary) string {
-	savingsRate := 0.0
-	if expenses.TotalIncome > 0 {
-		savingsRate = (expenses.TotalIncome - expenses.TotalExpenses) / expenses.TotalIncome * 100
+// RunInsights executes analyze_health(income, expenses, goals) from insights.lua.
+// Returns the insight messages joined with " | ".
+func (e *Engine) RunInsights(summary models.DashboardSummary) string {
+	L := glua.NewState()
+	defer L.Close()
+	if err := L.DoString(e.insightsSrc); err != nil {
+		return ""
 	}
-
-	var lines []string
-
-	// Mirror insights.lua logic
-	switch {
-	case savingsRate < 0:
-		lines = append(lines, "🚨 Gastos superam a renda este mês — reveja o orçamento imediatamente.")
-	case savingsRate < 10:
-		lines = append(lines, "⚠️ Taxa de poupança abaixo de 10% — considere cortar gastos variáveis.")
-	case savingsRate < 20:
-		lines = append(lines, "📊 Taxa de poupança razoável ("+fmt.Sprintf("%.1f", savingsRate)+"%). Tente chegar a 20%.")
-	case savingsRate >= 30:
-		lines = append(lines, "✅ Excelente! Taxa de poupança de "+fmt.Sprintf("%.1f", savingsRate)+"% — continue assim.")
-	default:
-		lines = append(lines, "👍 Boa taxa de poupança ("+fmt.Sprintf("%.1f", savingsRate)+"%). Metas no caminho certo.")
+	goalsTbl := L.NewTable()
+	for i, g := range summary.Goals {
+		gt := L.NewTable()
+		L.SetField(gt, "name", glua.LString(g.Name))
+		L.SetField(gt, "target", glua.LNumber(g.TargetAmount))
+		L.SetField(gt, "current", glua.LNumber(g.CurrentAmount))
+		L.RawSetInt(goalsTbl, i+1, gt)
 	}
-
-	// Top spending category alert (budget_check.lua logic)
-	for cat, amt := range expenses.ExpensesByCategory {
-		if budget, ok := expenses.BudgetUsage[cat]; ok && budget > 0 {
-			pct := amt / budget * 100
-			if pct > 90 {
-				lines = append(lines, "🔴 "+strings.Title(cat)+": orçamento crítico ("+fmt.Sprintf("%.0f", pct)+"% usado).")
-			} else if pct > 70 {
-				lines = append(lines, "🟡 "+strings.Title(cat)+": atenção ao orçamento ("+fmt.Sprintf("%.0f", pct)+"% usado).")
-			}
+	if err := L.CallByParam(glua.P{
+		Fn:      L.GetGlobal("analyze_health"),
+		NRet:    1,
+		Protect: true,
+	}, glua.LNumber(summary.TotalIncome), glua.LNumber(summary.TotalExpenses), goalsTbl); err != nil {
+		return ""
+	}
+	lv := L.Get(-1)
+	L.Pop(1)
+	result, ok := lv.(*glua.LTable)
+	if !ok {
+		return ""
+	}
+	var msgs []string
+	result.ForEach(func(_, v glua.LValue) {
+		tbl, ok := v.(*glua.LTable)
+		if !ok {
+			return
 		}
-	}
-
-	// Goal progress
-	for _, g := range expenses.Goals {
-		if g.TargetAmount > 0 {
-			pct := g.CurrentAmount / g.TargetAmount * 100
-			if pct >= 100 {
-				lines = append(lines, "🏆 Meta \""+g.Name+"\" atingida!")
-			} else if pct >= 75 {
-				lines = append(lines, "🎯 Meta \""+g.Name+"\": "+fmt.Sprintf("%.0f", pct)+"% — quase lá!")
-			}
+		if s, ok := tbl.RawGetString("msg").(glua.LString); ok {
+			msgs = append(msgs, string(s))
 		}
-	}
-
-	if len(lines) == 0 {
-		lines = append(lines, "📈 Finanças equilibradas. Continue monitorando seus gastos.")
-	}
-
-	return strings.Join(lines, " | ")
+	})
+	return strings.Join(msgs, " | ")
 }
 
-// ScriptSource returns the raw Lua source for display/documentation.
 func (e *Engine) ScriptSource(name string) string {
-	if s, ok := e.scripts[name]; ok {
-		return s
+	switch name {
+	case "forecast":
+		return e.forecastSrc
+	case "insights":
+		return e.insightsSrc
 	}
 	return ""
 }

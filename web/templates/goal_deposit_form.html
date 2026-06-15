@@ -1,0 +1,29 @@
+{{define "content"}}
+<div class="form-wrap">
+  <div class="form-card">
+    <div class="form-header">
+      <h2 class="modal-title">Depositar em Meta</h2>
+      <a href="/?tab=goals" class="btn-ghost">← Voltar</a>
+    </div>
+    <div style="margin-bottom:1rem;font-family:var(--ff-mono);font-size:.82rem;color:var(--ts)">
+      <span style="font-size:1.5rem">{{.Goal.Icon}}</span>
+      <strong style="color:var(--tx)">{{.Goal.Name}}</strong>
+      — {{fmtBRL .Goal.CurrentAmount}} de {{fmtBRL .Goal.TargetAmount}}
+    </div>
+    {{if .Error}}
+    <div class="flash-error" style="margin-bottom:.9rem">{{.Error}}</div>
+    {{end}}
+    <form method="POST" action="/goals/{{.Goal.ID}}/deposit" class="modal-body">
+      <div>
+        <label class="field-label">Valor do depósito (R$)</label>
+        <input class="field-input field-lg" type="number" name="amount" step="0.01" min="0.01"
+               placeholder="0,00" required autofocus>
+      </div>
+      <div class="modal-footer" style="padding:0;border:none;justify-content:flex-end;display:flex;gap:.6rem;margin-top:.5rem">
+        <a href="/?tab=goals" class="btn-ghost">Cancelar</a>
+        <button type="submit" class="btn-primary">Depositar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,47 @@
+{{define "content"}}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem">
+  <h2 style="font-family:var(--ff-disp);font-weight:700;font-size:1rem">Todos os Gastos</h2>
+  <a href="/expenses/new" class="btn-primary">+ Novo gasto</a>
+</div>
+
+<form method="GET" action="/" class="filters-row" style="margin-bottom:.85rem">
+  <input type="hidden" name="tab" value="expenses">
+  <input type="text" name="search" value="{{.Search}}" placeholder="Buscar descrição..." class="filter-input" id="filter-search">
+  <select name="cat" class="filter-input">
+    <option value="">Todas categorias</option>
+    {{range .Categories}}
+    <option value="{{.}}"{{if eq . $.Category}} selected{{end}}>{{.}}</option>
+    {{end}}
+  </select>
+  <button type="submit" class="btn-ghost">Filtrar</button>
+  {{if or .Search .Category}}
+  <a href="/?tab=expenses" class="btn-ghost">Limpar</a>
+  {{end}}
+</form>
+
+<div class="tx-list">
+  {{range .Expenses}}
+  <div class="tx-item">
+    <div class="tx-icon" style="background:{{catColor (print .Category)}}22">
+      {{catIcon (print .Category)}}
+    </div>
+    <div class="tx-info">
+      <div class="tx-desc">{{.Description}}</div>
+      <div class="tx-sub">{{.Category}} · {{fmtDate .Date}}{{if .IsRecurring}} · recorrente{{end}}</div>
+    </div>
+    <div class="tx-right">
+      <span class="tx-amount">{{fmtBRL .Amount}}</span>
+      <span class="tx-date">{{.Date.Format "02/01/2006"}}</span>
+    </div>
+    <div class="tx-actions">
+      <a href="/expenses/{{.ID}}/edit" class="act-btn edit" title="Editar">✎</a>
+      <a href="/expenses/{{.ID}}/confirm-delete" class="act-btn del" title="Excluir">✕</a>
+    </div>
+  </div>
+  {{else}}
+  <div style="text-align:center;padding:3rem;color:var(--tm);font-family:var(--ff-mono);font-size:.85rem">
+    Nenhum gasto encontrado.
+  </div>
+  {{end}}
+</div>
+{{end}}

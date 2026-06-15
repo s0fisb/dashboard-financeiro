@@ -1,0 +1,119 @@
+{{define "content"}}
+<div class="kpi-grid">
+  <div class="kpi-card kpi-income">
+    <div class="kpi-label">Renda Mensal</div>
+    <div class="kpi-value">{{fmtBRL .Income}}</div>
+    <div class="kpi-sub">salário + entradas</div>
+    <div class="kpi-bg">R$</div>
+    <a href="/budget/edit" class="kpi-edit-btn" title="Editar">⚙</a>
+  </div>
+  <div class="kpi-card kpi-income" style="border-color:rgba(96,165,250,.2);background:linear-gradient(135deg,#0d1322,#0a0f1c)">
+    <div class="kpi-label">Entradas Avulsas</div>
+    <div class="kpi-value" style="color:var(--sky)">{{fmtBRL .DepositTotal}}</div>
+    <div class="kpi-sub">depósitos do mês</div>
+    <div class="kpi-bg" style="color:#fff">+</div>
+    <a href="/deposits/new" class="kpi-edit-btn" title="Adicionar">+</a>
+  </div>
+  <div class="kpi-card kpi-expense">
+    <div class="kpi-label">Total Gasto</div>
+    <div class="kpi-value">{{fmtBRL .TotalExpenses}}</div>
+    <div class="kpi-sub">{{printf "%.0f" .ExpensePct}}% da renda</div>
+    <div class="kpi-bg">%</div>
+  </div>
+  <div class="kpi-card kpi-balance">
+    <div class="kpi-label">Saldo</div>
+    <div class="kpi-value">{{fmtBRL .Balance}}</div>
+    <div class="kpi-sub">poupança: {{printf "%.0f" .SavingsPct}}%</div>
+    <div class="kpi-bg">≡</div>
+  </div>
+</div>
+
+<div class="charts-row">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Por Categoria</span>
+      <span class="tag">este mês</span>
+    </div>
+    <div class="donut-wrap">
+      {{.DonutSVG}}
+      <div class="donut-center">
+        <div class="donut-val">{{fmtBRL .TotalExpenses}}</div>
+        <div class="donut-lbl">total</div>
+      </div>
+    </div>
+    <div class="legend">
+      {{range .BudgetItems}}
+      <div class="legend-item">
+        <span class="legend-dot" style="background:{{catColor .Category}}"></span>
+        <span>{{.Category}}</span>
+      </div>
+      {{end}}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Tendência Mensal</span>
+      <span class="tag">6 meses</span>
+    </div>
+    {{.BarSVG}}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Orçamento por Categoria</span>
+    <a href="/budget/edit" class="tag" style="text-decoration:none;cursor:pointer">editar</a>
+  </div>
+  <div class="budget-grid">
+    {{range .BudgetItems}}
+    <div class="budget-item">
+      <div class="budget-meta">
+        <span class="budget-cat">{{.Icon}} {{.Category}}</span>
+        <span class="budget-pct {{.Class}}">{{printf "%.0f" .Pct}}%</span>
+      </div>
+      <div class="budget-bar-bg">
+        <div class="budget-bar-fill {{.Class}}" style="width:{{printf "%.1f" (clampPct .Pct)}}%"></div>
+      </div>
+      <div class="budget-amounts">
+        <span>{{fmtBRL .Spent}}</span>
+        <span>{{fmtBRL .Limit}}</span>
+      </div>
+    </div>
+    {{end}}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Últimas Transações</span>
+    <a href="/?tab=expenses" class="tag" style="text-decoration:none">ver todas</a>
+  </div>
+  <div class="tx-list">
+    {{range .RecentExpenses}}
+    <div class="tx-item">
+      <div class="tx-icon" style="background:{{catColor (print .Category)}}22">
+        {{catIcon (print .Category)}}
+      </div>
+      <div class="tx-info">
+        <div class="tx-desc">{{.Description}}</div>
+        <div class="tx-sub">{{.Category}}{{if .IsRecurring}} · recorrente{{end}}</div>
+      </div>
+      <div class="tx-right">
+        <span class="tx-amount">{{fmtBRL .Amount}}</span>
+        <span class="tx-date">{{fmtDate .Date}}</span>
+      </div>
+      <div class="tx-actions">
+        <a href="/expenses/{{.ID}}/edit" class="act-btn edit">✎</a>
+        <a href="/expenses/{{.ID}}/confirm-delete" class="act-btn del">✕</a>
+      </div>
+    </div>
+    {{else}}
+    <div style="text-align:center;padding:2rem;color:var(--tm);font-family:var(--ff-mono);font-size:.82rem">
+      Nenhuma transação ainda.
+    </div>
+    {{end}}
+  </div>
+</div>
+
+{{end}}

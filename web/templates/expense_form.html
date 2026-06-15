@@ -1,0 +1,43 @@
+{{define "content"}}
+<div class="form-wrap">
+  <div class="form-card">
+    <div class="form-header">
+      <h2 class="modal-title">{{if .IsEdit}}Editar Gasto{{else}}Novo Gasto{{end}}</h2>
+      <a href="/?tab=expenses" class="btn-ghost">← Voltar</a>
+    </div>
+    {{if .Error}}
+    <div class="flash-error" style="margin-bottom:.9rem">{{.Error}}</div>
+    {{end}}
+    <form method="POST" action="{{if .IsEdit}}/expenses/{{.Expense.ID}}{{else}}/expenses{{end}}" class="modal-body">
+      <div>
+        <label class="field-label">Descrição</label>
+        <input class="field-input" type="text" name="description" value="{{.Expense.Description}}" placeholder="Ex: Supermercado" required autofocus>
+      </div>
+      <div>
+        <label class="field-label">Valor (R$)</label>
+        <input class="field-input field-lg" type="number" name="amount" step="0.01" min="0.01"
+               value="{{if .Expense.Amount}}{{printf "%.2f" .Expense.Amount}}{{end}}" placeholder="0,00" required>
+      </div>
+      <div>
+        <label class="field-label">Categoria</label>
+        <select class="field-input" name="category">
+          {{range .Categories}}
+          <option value="{{.}}"{{if eq . (print $.Expense.Category)}} selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Data</label>
+        <input class="field-input" type="date" name="date" value="{{fmtDateInput .Expense.Date}}">
+      </div>
+      <label class="field-row">
+        <input type="checkbox" name="is_recurring"{{if .Expense.IsRecurring}} checked{{end}}> Gasto recorrente
+      </label>
+      <div class="modal-footer" style="padding:0;border:none;justify-content:flex-end;display:flex;gap:.6rem;margin-top:.5rem">
+        <a href="/?tab=expenses" class="btn-ghost">Cancelar</a>
+        <button type="submit" class="btn-primary">{{if .IsEdit}}Salvar alterações{{else}}Adicionar gasto{{end}}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

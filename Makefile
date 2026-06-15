@@ -1,6 +1,6 @@
 GO      := go
 BINARY  := bin/server
-PORT    := 8080
+PORT    := 8081
 
 .PHONY: all build run clean dev
 

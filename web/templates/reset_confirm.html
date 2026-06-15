@@ -1,0 +1,19 @@
+{{define "content"}}
+<div class="form-wrap">
+  <div class="form-card">
+    <div class="form-header">
+      <h2 class="modal-title">Resetar Todos os Dados</h2>
+    </div>
+    <div style="padding:1.3rem 0;font-size:.92rem;color:var(--ts);line-height:1.6">
+      Isso irá remover <strong style="color:var(--rose)">todos os gastos, metas e depósitos</strong>
+      e zerar o orçamento. Esta ação não pode ser desfeita.
+    </div>
+    <form method="POST" action="/reset">
+      <div style="display:flex;gap:.6rem;justify-content:flex-end">
+        <a href="/" class="btn-ghost">Cancelar</a>
+        <button type="submit" class="btn-primary" style="background:var(--rose);color:#fff">Resetar tudo</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

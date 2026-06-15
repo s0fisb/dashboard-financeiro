@@ -1,0 +1,39 @@
+{{define "content"}}
+<div class="goals-toolbar">
+  <h2 style="font-family:var(--ff-disp);font-weight:700;font-size:1rem">Minhas Metas</h2>
+  <a href="/goals/new" class="btn-primary">+ Nova meta</a>
+</div>
+
+<div class="goals-grid">
+  {{range .Goals}}
+  <div class="goal-card">
+    <div class="goal-actions">
+      <a href="/goals/{{.ID}}/edit" class="act-btn edit" title="Editar">✎</a>
+      <a href="/goals/{{.ID}}/confirm-delete" class="act-btn del" title="Excluir">✕</a>
+    </div>
+    <div class="goal-top">
+      <div class="goal-icon" style="background:{{.Color}}22">{{.Icon}}</div>
+      <div>
+        <div class="goal-name">{{.Name}}</div>
+        <div class="goal-dl">prazo: {{.DeadlineFmt}}</div>
+      </div>
+    </div>
+    <div class="goal-amounts">
+      <span class="goal-curr" style="color:{{.Color}}">{{fmtBRL .CurrentAmount}}</span>
+      <span class="goal-tgt">de {{fmtBRL .TargetAmount}}</span>
+    </div>
+    <div class="goal-bar-bg">
+      <div class="goal-bar-fill" style="width:{{printf "%.1f" .PctClamped}}%;background:{{.Color}}"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.4rem">
+      <a href="/goals/{{.ID}}/deposit" class="btn-ghost" style="padding:.35rem .75rem;font-size:.78rem">+ Depositar</a>
+      <span class="goal-pct">{{pctStr .CurrentAmount .TargetAmount}}</span>
+    </div>
+  </div>
+  {{else}}
+  <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--tm);font-family:var(--ff-mono);font-size:.85rem">
+    Nenhuma meta cadastrada. <a href="/goals/new" style="color:var(--gold)">Criar primeira meta</a>
+  </div>
+  {{end}}
+</div>
+{{end}}

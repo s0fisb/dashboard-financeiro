@@ -1,0 +1,56 @@
+{{define "content"}}
+<div class="form-wrap">
+  <div class="form-card">
+    <div class="form-header">
+      <h2 class="modal-title">{{if .IsEdit}}Editar Meta{{else}}Nova Meta{{end}}</h2>
+      <a href="/?tab=goals" class="btn-ghost">← Voltar</a>
+    </div>
+    {{if .Error}}
+    <div class="flash-error" style="margin-bottom:.9rem">{{.Error}}</div>
+    {{end}}
+    <form method="POST" action="{{if .IsEdit}}/goals/{{.Goal.ID}}{{else}}/goals{{end}}" class="modal-body">
+      <div>
+        <label class="field-label">Nome da meta</label>
+        <input class="field-input" type="text" name="name" value="{{.Goal.Name}}" placeholder="Ex: Reserva de emergência" required autofocus>
+      </div>
+      <div>
+        <label class="field-label">Valor alvo (R$)</label>
+        <input class="field-input field-lg" type="number" name="target_amount" step="0.01" min="0.01"
+               value="{{if .Goal.TargetAmount}}{{printf "%.2f" .Goal.TargetAmount}}{{end}}" placeholder="0,00" required>
+      </div>
+      <div>
+        <label class="field-label">Valor atual (R$)</label>
+        <input class="field-input" type="number" name="current_amount" step="0.01" min="0"
+               value="{{if .Goal.CurrentAmount}}{{printf "%.2f" .Goal.CurrentAmount}}{{end}}" placeholder="0,00">
+      </div>
+      <div>
+        <label class="field-label">Prazo</label>
+        <input class="field-input" type="date" name="deadline" value="{{fmtDateInput .Goal.Deadline}}">
+      </div>
+      <div>
+        <label class="field-label">Ícone</label>
+        <select class="field-input" name="icon">
+          {{range .Icons}}
+          <option value="{{.}}"{{if eq . $.Goal.Icon}} selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Cor</label>
+        <div class="color-picker-radio">
+          {{range .Colors}}
+          <label class="color-radio-wrap">
+            <input type="radio" name="color" value="{{.}}"{{if eq . $.Goal.Color}} checked{{end}}>
+            <span class="color-radio-swatch" style="background:{{.}}"></span>
+          </label>
+          {{end}}
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:0;border:none;justify-content:flex-end;display:flex;gap:.6rem;margin-top:.5rem">
+        <a href="/?tab=goals" class="btn-ghost">Cancelar</a>
+        <button type="submit" class="btn-primary">{{if .IsEdit}}Salvar alterações{{else}}Criar meta{{end}}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

@@ -116,6 +116,17 @@ func (s *Store) GetCurrentMonthExpenses() []models.Expense {
 	return result
 }
 
+func (s *Store) GetExpensesByMonth(year, month int) []models.Expense {
+	s.mu.RLock(); defer s.mu.RUnlock()
+	var result []models.Expense
+	for _, e := range s.Expenses {
+		if e.Date.Year() == year && int(e.Date.Month()) == month {
+			result = append(result, e)
+		}
+	}
+	return result
+}
+
 func (s *Store) GetAllExpenses() []models.Expense {
 	s.mu.RLock(); defer s.mu.RUnlock()
 	out := make([]models.Expense, len(s.Expenses))
@@ -243,6 +254,18 @@ func (s *Store) GetCurrentMonthDeposits() []models.Deposit {
 		}
 	}
 	return result
+}
+
+// AddGoalDeposit adds amount to a goal's CurrentAmount. Returns false if not found.
+func (s *Store) AddGoalDeposit(id int, amount float64) bool {
+	s.mu.Lock(); defer s.mu.Unlock()
+	for i, g := range s.Goals {
+		if g.ID == id {
+			s.Goals[i].CurrentAmount += amount
+			return true
+		}
+	}
+	return false
 }
 
 // ── RESET ─────────────────────────────────────

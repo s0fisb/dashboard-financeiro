@@ -1,0 +1,21 @@
+{{define "content"}}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Previsão com Lua — Média Ponderada</span>
+    <span class="tag">gopher-lua</span>
+  </div>
+  {{.ForecastSVG}}
+</div>
+
+<div class="forecast-cards">
+  {{range .MonthCards}}
+  <div class="fc{{if .Predicted}} predicted{{end}}">
+    <div class="fc-month">{{.Month}}</div>
+    <div class="fc-amount">
+      {{if .Predicted}}{{fmtBRL .Predicted}}{{else}}{{fmtBRL .Actual}}{{end}}
+    </div>
+    <div class="fc-label">{{if .Predicted}}previsão Lua{{else}}realizado{{end}}</div>
+  </div>
+  {{end}}
+</div>
+{{end}}

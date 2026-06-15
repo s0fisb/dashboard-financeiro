@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinançasLua — {{.PageTitle}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+<div class="noise-overlay"></div>
+
+<aside class="sidebar">
+  <div class="logo">
+    <span class="logo-icon">◈</span>
+    <div>
+      <div class="logo-name">FinançasLua</div>
+      <div class="logo-sub">gopher-lua engine</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <a href="/?tab=overview" class="nav-item{{if eq .Tab "overview"}} active{{end}}">
+      <span class="ni">◉</span> Visão Geral
+    </a>
+    <a href="/?tab=expenses" class="nav-item{{if eq .Tab "expenses"}} active{{end}}">
+      <span class="ni">◈</span> Gastos
+    </a>
+    <a href="/?tab=goals" class="nav-item{{if eq .Tab "goals"}} active{{end}}">
+      <span class="ni">◆</span> Metas
+    </a>
+    <a href="/?tab=calendar" class="nav-item{{if eq .Tab "calendar"}} active{{end}}">
+      <span class="ni">◇</span> Calendário
+    </a>
+    <a href="/?tab=forecast" class="nav-item{{if eq .Tab "forecast"}} active{{end}}">
+      <span class="ni">▲</span> Previsões
+    </a>
+    <a href="/?tab=lua" class="nav-item{{if eq .Tab "lua"}} active{{end}}">
+      <span class="ni">⬡</span> Scripts Lua
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="lua-badge">
+      <span class="lua-dot"></span>
+      gopher-lua ativo
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">{{.PageTitle}}</div>
+      <div class="page-date">{{.PageDate}}</div>
+    </div>
+    <div class="topbar-right">
+      {{if .LuaInsights}}
+      <div class="insight-pill">
+        <span class="insight-icon">⬡</span>
+        <span id="insight-text">{{.LuaInsights}}</span>
+      </div>
+      {{end}}
+      <a href="/budget/edit" class="icon-btn" title="Orçamento">⚙</a>
+      <a href="/deposits/new" class="icon-btn" title="Entrada avulsa">+</a>
+      <a href="/?tab={{.Tab}}" class="icon-btn" title="Atualizar">↻</a>
+      <a href="/reset/confirm" class="icon-btn" style="text-decoration:none" title="Resetar dados">⊘</a>
+    </div>
+  </header>
+
+  <div class="tab active" style="flex:1;overflow-y:auto;padding:1.6rem 1.75rem 2rem;animation:fadeUp .28s ease">
+    {{if .Flash}}
+    <div class="flash-{{.FlashType}}">{{.Flash}}</div>
+    {{end}}
+    {{block "content" .}}{{end}}
+  </div>
+</main>
+</body>
+</html>

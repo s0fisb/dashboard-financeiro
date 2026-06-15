@@ -1,0 +1,31 @@
+{{define "content"}}
+<div class="form-wrap">
+  <div class="form-card" style="width:560px">
+    <div class="form-header">
+      <h2 class="modal-title">Orçamento Mensal</h2>
+      <a href="/?tab=overview" class="btn-ghost">← Voltar</a>
+    </div>
+    <form method="POST" action="/budget" class="modal-body">
+      <div>
+        <label class="field-label">Renda mensal (R$)</label>
+        <input class="field-input field-lg" type="number" name="income" step="0.01" min="0"
+               value="{{printf "%.2f" .Budget.Income}}" placeholder="0,00">
+      </div>
+      <p class="budget-section-title">Limites por Categoria</p>
+      <div class="budget-fields">
+        {{range .Categories}}
+        <div class="budget-field-row">
+          <label>{{catIcon .}} {{.}}</label>
+          <input class="field-input" type="number" name="b_{{.}}" step="0.01" min="0"
+                 value="{{printf "%.2f" (budgetVal $.Budget.Budgets .)}}">
+        </div>
+        {{end}}
+      </div>
+      <div class="modal-footer" style="padding:0;border:none;justify-content:flex-end;display:flex;gap:.6rem;margin-top:.5rem">
+        <a href="/?tab=overview" class="btn-ghost">Cancelar</a>
+        <button type="submit" class="btn-primary">Salvar orçamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

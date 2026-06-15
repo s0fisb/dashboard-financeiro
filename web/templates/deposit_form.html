@@ -1,0 +1,31 @@
+{{define "content"}}
+<div class="form-wrap">
+  <div class="form-card">
+    <div class="form-header">
+      <h2 class="modal-title">Registrar Entrada Avulsa</h2>
+      <a href="/?tab=overview" class="btn-ghost">← Voltar</a>
+    </div>
+    {{if .Error}}
+    <div class="flash-error" style="margin-bottom:.9rem">{{.Error}}</div>
+    {{end}}
+    <form method="POST" action="/deposits" class="modal-body">
+      <div>
+        <label class="field-label">Descrição</label>
+        <input class="field-input" type="text" name="description" placeholder="Ex: Freelance, venda, etc." autofocus>
+      </div>
+      <div>
+        <label class="field-label">Valor (R$)</label>
+        <input class="field-input field-lg" type="number" name="amount" step="0.01" min="0.01" placeholder="0,00" required>
+      </div>
+      <div>
+        <label class="field-label">Data</label>
+        <input class="field-input" type="date" name="date">
+      </div>
+      <div class="modal-footer" style="padding:0;border:none;justify-content:flex-end;display:flex;gap:.6rem;margin-top:.5rem">
+        <a href="/?tab=overview" class="btn-ghost">Cancelar</a>
+        <button type="submit" class="btn-primary">Registrar entrada</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}
